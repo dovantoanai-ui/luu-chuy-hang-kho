@@ -36,9 +36,35 @@ input[type=checkbox]{width:12px;height:12px;accent-color:#238636;cursor:pointer;
 .cd.sel{background:#238636;color:#fff;font-weight:700}
 .cd.inr{background:rgba(35,134,54,.2);color:#56d364}
 #err{display:none;padding:6px 16px;background:rgba(248,81,73,.1);border-bottom:1px solid rgba(248,81,73,.3);color:#ff7b72;font-size:12px;flex-shrink:0}
+
+#login-overlay{position:fixed;inset:0;z-index:9999;background:linear-gradient(135deg,#0f172a,#1e293b);display:flex;align-items:center;justify-content:center;}
+#login-overlay.hidden{display:none;}
+.login-box{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:36px 28px;width:300px;max-width:90vw;text-align:center;}
+.login-logo{font-size:36px;margin-bottom:12px;}
+.login-title{font-size:18px;font-weight:700;color:#fff;margin-bottom:4px;}
+.login-sub{font-size:13px;color:rgba(255,255,255,.5);margin-bottom:24px;}
+.login-inp{width:100%;padding:13px 16px;border-radius:11px;border:1.5px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:#fff;font-size:16px;outline:none;box-sizing:border-box;text-align:center;letter-spacing:4px;font-weight:700;}
+.login-inp:focus{border-color:#00d26a;}
+.login-inp::placeholder{letter-spacing:normal;font-weight:400;}
+.login-btn{margin-top:14px;width:100%;padding:13px;border-radius:11px;border:none;background:#00d26a;color:#fff;font-size:15px;font-weight:700;cursor:pointer;}
+.login-btn:active{opacity:.85;}
+.login-err{margin-top:10px;font-size:13px;color:#ff6b6b;min-height:18px;}
+
 </style>
 </head>
 <body>
+
+<div id="login-overlay">
+  <div class="login-box">
+    <div class="login-logo">🏭</div>
+    <div class="login-title">Kho Flow</div>
+    <div class="login-sub">Nhap mat khau de tiep tuc</div>
+    <input class="login-inp" type="password" id="loginInp" placeholder="Mat khau..." maxlength="30" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="login-btn" onclick="doLogin()">Dang nhap</button>
+    <div class="login-err" id="loginErr"></div>
+  </div>
+</div>
+
 
 <div id="ld"><div class="spin"></div><p id="ld-msg">Dang tai du lieu...</p></div>
 
@@ -627,10 +653,40 @@ function saveSettings(){
 }
 document.addEventListener('keydown',function(e){if(e.key==='Escape')closeSettings();});
 
+
+var _APP_PW = 'nemthanh3636';
+var _SESSION_KEY = 'kflow_auth';
+
+function checkAuth(){
+  var s=sessionStorage.getItem(_SESSION_KEY);
+  if(s===_APP_PW){
+    document.getElementById('login-overlay').classList.add('hidden');
+  } else {
+    document.getElementById('login-overlay').classList.remove('hidden');
+    setTimeout(function(){var i=document.getElementById('loginInp');if(i)i.focus();},100);
+  }
+}
+
+function doLogin(){
+  var inp=document.getElementById('loginInp');
+  var err=document.getElementById('loginErr');
+  if(!inp)return;
+  if(inp.value===_APP_PW){
+    sessionStorage.setItem(_SESSION_KEY,_APP_PW);
+    document.getElementById('login-overlay').classList.add('hidden');
+    err.textContent='';
+  } else {
+    err.textContent='Mat khau khong dung, thu lai!';
+    inp.value='';
+    inp.focus();
+  }
+}
+
 window.onload=function(){
   try{var saved=localStorage.getItem('kflow_cfg');if(saved){var cfg=JSON.parse(saved);if(cfg.urlTH)URL_TH=cfg.urlTH;if(cfg.urlHN)URL_HN=cfg.urlHN;if(cfg.urlHD)URL_HD=cfg.urlHD;if(cfg.snTH!==undefined)SNAME.th=cfg.snTH;if(cfg.snHN!==undefined)SNAME.hn=cfg.snHN;if(cfg.snHD!==undefined)SNAME.hd=cfg.snHD;if(cfg.colTH)COL_IDX.th=cfg.colTH;if(cfg.colHN)COL_IDX.hn=cfg.colHN;if(cfg.colHD)COL_IDX.hd=cfg.colHD;}}catch(e){}
   var t=today();CAL.from=new Date(t);CAL.to=new Date(t);updDateBtns();
   Object.keys(CP).forEach(function(k){var el=document.getElementById('c-'+k);if(el){el.style.left=CP[k].x+'px';el.style.top=CP[k].y+'px';}});
+  checkAuth();
   loadAll();
   setInterval(function(){loadAll();},5*60*1000);
 };
