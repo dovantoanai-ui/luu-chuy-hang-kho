@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Luu Chuyen Kho Hang v10</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:sans-serif;background:#0d1117;color:#e2e8f0;height:100vh;overflow:hidden;display:flex;flex-direction:column}
+#ld{position:fixed;inset:0;background:rgba(0,0,0,.88);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;z-index:9999}
+.spin{width:38px;height:38px;border:3px solid rgba(255,255,255,.1);border-top-color:#00d26a;border-radius:50%;animation:sp .6s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+#ld p{color:#fff;font-size:14px}
+@keyframes dash{to{stroke-dashoffset:-24}}
+.pb{padding:4px 12px;border-radius:20px;font-size:11px;color:#8b949e;cursor:pointer;transition:all .15s}
+.pb.on{background:#1a7f37;color:#56d364;font-weight:700}
+.dc{position:absolute;cursor:grab;user-select:none;z-index:2;border-radius:10px;overflow:hidden}
+.dc:active{cursor:grabbing}
+.dc-hdr{padding:7px 10px 6px;border-bottom:1px solid rgba(255,255,255,.06);display:flex;align-items:center;justify-content:space-between}
+.dc-body{padding:6px 10px}
+.dr{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:11px}
+.dr:last-child{border-bottom:none}
+.dnet{margin-top:5px;border-radius:5px;padding:5px 8px;display:flex;justify-content:space-between;font-size:11px}
+.sp-row{display:flex;align-items:center;gap:6px;padding:4px 8px;border-radius:6px;border:1px solid rgba(255,255,255,.06);cursor:pointer;margin-bottom:3px;transition:all .15s}
+.sp-row:hover{background:rgba(255,255,255,.04)}
+.sp-row.on{border-color:rgba(35,134,54,.35);background:rgba(35,134,54,.07)}
+input[type=checkbox]{width:12px;height:12px;accent-color:#238636;cursor:pointer;flex-shrink:0}
+.dd{width:100%;padding:6px 24px 6px 8px;border-radius:7px;border:1px solid rgba(255,255,255,.12);background:#0d1117;color:#e2e8f0;font-size:11px;outline:none;cursor:pointer;appearance:none;-webkit-appearance:none;margin-bottom:8px}
+.dd:focus{border-color:#238636}
+.cal{position:fixed;z-index:8000;background:#21262d;border:1px solid rgba(255,255,255,.15);border-radius:12px;padding:12px;box-shadow:0 16px 50px rgba(0,0,0,.6);display:none;min-width:232px}
+.cal.show{display:block}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.cd{text-align:center;font-size:11px;padding:5px 0;border-radius:5px;cursor:pointer;color:#8b949e}
+.cd:hover{background:rgba(255,255,255,.08);color:#f0f6fc}
+.cd.today{color:#58a6ff;font-weight:700}
+.cd.sel{background:#238636;color:#fff;font-weight:700}
+.cd.inr{background:rgba(35,134,54,.2);color:#56d364}
+#err{display:none;padding:6px 16px;background:rgba(248,81,73,.1);border-bottom:1px solid rgba(248,81,73,.3);color:#ff7b72;font-size:12px;flex-shrink:0}
+
+#login-overlay{position:fixed;inset:0;z-index:9999;background:linear-gradient(135deg,#0f172a,#1e293b);display:flex;align-items:center;justify-content:center;}
+#login-overlay.hidden{display:none;}
+.login-box{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:36px 28px;width:300px;max-width:90vw;text-align:center;}
+.login-logo{font-size:36px;margin-bottom:12px;}
+.login-title{font-size:18px;font-weight:700;color:#fff;margin-bottom:4px;}
+.login-sub{font-size:13px;color:rgba(255,255,255,.5);margin-bottom:24px;}
+.login-inp{width:100%;padding:13px 16px;border-radius:11px;border:1.5px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:#fff;font-size:16px;outline:none;box-sizing:border-box;text-align:center;letter-spacing:4px;font-weight:700;}
+.login-inp:focus{border-color:#00d26a;}
+.login-inp::placeholder{letter-spacing:normal;font-weight:400;}
+.login-btn{margin-top:14px;width:100%;padding:13px;border-radius:11px;border:none;background:#00d26a;color:#fff;font-size:15px;font-weight:700;cursor:pointer;}
+.login-btn:active{opacity:.85;}
+.login-err{margin-top:10px;font-size:13px;color:#ff6b6b;min-height:18px;}
+
+</style>
+</head>
+<body>
+
+<div id="login-overlay">
+  <div class="login-box">
+    <div class="login-logo">🏭</div>
+    <div class="login-title">Kho Flow</div>
+    <div class="login-sub">Nhap mat khau de tiep tuc</div>
+    <input class="login-inp" type="password" id="loginInp" placeholder="Mat khau..." maxlength="30" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="login-btn" onclick="doLogin()">Dang nhap</button>
+    <div class="login-err" id="loginErr"></div>
+  </div>
+</div>
+
+
+<div id="ld"><div class="spin"></div><p id="ld-msg">Dang tai du lieu...</p></div>
+
+<header style="background:#161b22;border-bottom:1px solid rgba(255,255,255,.07);padding:0 16px;display:flex;align-items:center;height:48px;gap:10px;flex-shrink:0">
+  <span style="font-size:14px;font-weight:700;color:#f0f6fc;margin-right:4px">Luu Chuyen Kho Hang — v10</span>
+  <div style="display:flex;gap:3px;background:rgba(255,255,255,.05);padding:3px;border-radius:20px">
+    <span class="pb on" id="pb-today" onclick="setPeriod('today',this)">Hom nay</span>
+    <span class="pb" id="pb-week" onclick="setPeriod('week',this)">Tuan nay</span>
+    <span class="pb" id="pb-month" onclick="setPeriod('month',this)">Thang nay</span>
+  </div>
+  <button style="padding:4px 10px;border-radius:6px;border:1px solid rgba(255,255,255,.1);background:transparent;color:#8b949e;font-size:11px;cursor:pointer" id="btn-from" onclick="openCal('from',this)">Tu ngay</button>
+  <button style="padding:4px 10px;border-radius:6px;border:1px solid rgba(255,255,255,.1);background:transparent;color:#8b949e;font-size:11px;cursor:pointer" id="btn-to" onclick="openCal('to',this)">Den ngay</button>
+  <span style="font-size:11px;color:#8b949e;margin-left:auto" id="upd-t"></span>
+  <button style="padding:4px 10px;border-radius:6px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#e2e8f0;font-size:11px;cursor:pointer" onclick="loadAll()">Lam moi</button>
+  <button style="padding:4px 10px;border-radius:6px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.04);color:#e2e8f0;font-size:11px;cursor:pointer" onclick="openSettings()">Cai dat</button>
+</header>
+
+<div id="err"></div>
+
+<div style="display:flex;flex:1;overflow:hidden">
+
+<!-- LEFT PANEL -->
+<div style="width:155px;flex-shrink:0;background:#161b22;border-right:1px solid rgba(255,255,255,.07);padding:11px 10px;display:flex;flex-direction:column;overflow-y:auto">
+  <div style="font-size:9px;font-weight:700;color:#8b949e;text-transform:uppercase;letter-spacing:.6px;margin-bottom:5px">Tim san pham</div>
+  <div style="position:relative;margin-bottom:7px">
+    <select class="dd" id="dd-sp" onchange="onDropdown(this.value)">
+      <option value="">-- Chon SP --</option>
+    </select>
+    <svg style="position:absolute;right:7px;top:50%;transform:translateY(-50%);pointer-events:none" width="10" height="6"><path d="M0 0l5 6 5-6z" fill="#8b949e"/></svg>
+  </div>
+  <div style="display:flex;align-items:center;gap:5px;margin-bottom:6px">
+    <div style="flex:1;height:1px;background:rgba(255,255,255,.07)"></div>
+    <span style="font-size:9px;color:#8b949e;white-space:nowrap">chon nhieu</span>
+    <div style="flex:1;height:1px;background:rgba(255,255,255,.07)"></div>
+  </div>
+  <label style="display:flex;align-items:center;gap:7px;padding:5px 8px;border-radius:7px;background:#1a2d1a;border:1px solid rgba(35,134,54,.35);cursor:pointer;margin-bottom:5px">
+    <input type="checkbox" id="cb-all" checked onchange="toggleAll(this.checked)">
+    <span style="font-size:10px;font-weight:700;color:#56d364">Tat ca SP</span>
+  </label>
+  <div id="sp-list"></div>
+  <div id="sp-note" style="font-size:10px;color:#f0c040;padding:4px 6px;background:rgba(240,192,64,.08);border-radius:5px;text-align:center;display:none;margin-top:4px"></div>
+  <div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.07)">
+    <div style="font-size:9px;font-weight:700;color:#8b949e;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Doi soat</div>
+    <div id="rs-list" style="display:flex;flex-direction:column;gap:3px"></div>
+  </div>
+  <div style="margin-top:8px;font-size:9px;color:#8b949e;line-height:1.5;padding:5px 7px;background:rgba(255,255,255,.03);border-radius:6px">Keo hop de di chuyen tu do</div>
+</div>
+
+<!-- CANVAS -->
+<div id="cv" style="flex:1;position:relative;overflow:hidden;background:#0d1117">
+  <svg id="arsvg" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1"></svg>
+
+  <!-- CARD Kho TH -->
+  <div id="c-th" class="dc" style="width:138px;background:#161b22;border:1px solid rgba(0,210,106,.3)" onmousedown="startDrag(event,'th')" ontouchstart="startDrag(event,'th')">
+    <div class="dc-hdr" style="background:rgba(0,210,106,.07)"><span style="font-size:9px;font-weight:700;color:#00d26a;text-transform:uppercase;letter-spacing:.5px">Kho Thanh Hoa</span><span style="font-size:9px;color:#8b949e">TH</span></div>
+    <div class="dc-body" id="bd-th"></div>
+  </div>
+
+  <!-- CARD Kho HN -->
+  <div id="c-hn" class="dc" style="width:120px;background:#161b22;border:1px solid rgba(88,166,255,.3)" onmousedown="startDrag(event,'hn')" ontouchstart="startDrag(event,'hn')">
+    <div class="dc-hdr" style="background:rgba(88,166,255,.07)"><span style="font-size:9px;font-weight:700;color:#58a6ff;text-transform:uppercase;letter-spacing:.5px">Kho Ha Noi</span><span style="font-size:9px;color:#8b949e">HN</span></div>
+    <div class="dc-body" id="bd-hn"></div>
+  </div>
+
+  <!-- CARD Hoa Don -->
+  <div id="c-hd" class="dc" style="width:112px;background:#161b22;border:1px solid rgba(240,192,64,.3)" onmousedown="startDrag(event,'hd')" ontouchstart="startDrag(event,'hd')">
+    <div class="dc-hdr" style="background:rgba(240,192,64,.07)"><span style="font-size:9px;font-weight:700;color:#f0c040;text-transform:uppercase;letter-spacing:.5px">Hoa Don</span><span style="font-size:9px;color:#8b949e">HD</span></div>
+    <div class="dc-body" id="bd-hd"></div>
+  </div>
+
+  <!-- CARD Sieu thi -->
+  <div id="c-st" class="dc" style="width:92px;background:#1a1a10;border:1px solid rgba(240,192,64,.25)" onmousedown="startDrag(event,'st')" ontouchstart="startDrag(event,'st')">
+    <div class="dc-hdr" style="background:rgba(240,192,64,.06)"><span style="font-size:9px;font-weight:700;color:#f0c040;text-transform:uppercase;letter-spacing:.4px">Sieu thi</span></div>
+    <div id="bd-st" style="padding:7px 10px"></div>
+  </div>
+
+  <!-- CARD Ban le TH -->
+  <div id="c-blth" class="dc" style="width:138px;background:#1e1428;border:1px solid rgba(167,139,250,.3)" onmousedown="startDrag(event,'blth')" ontouchstart="startDrag(event,'blth')">
+    <div class="dc-hdr" style="background:rgba(167,139,250,.07)"><span style="font-size:9px;font-weight:700;color:#a78bfa;text-transform:uppercase;letter-spacing:.4px">Ban le TH</span></div>
+    <div id="bd-blth" style="padding:7px 10px"></div>
+  </div>
+
+  <!-- CARD Ban le HN -->
+  <div id="c-blhn" class="dc" style="width:120px;background:#1a150e;border:1px solid rgba(251,146,60,.3)" onmousedown="startDrag(event,'blhn')" ontouchstart="startDrag(event,'blhn')">
+    <div class="dc-hdr" style="background:rgba(251,146,60,.07)"><span style="font-size:9px;font-weight:700;color:#fb923c;text-transform:uppercase;letter-spacing:.4px">Ban le HN</span></div>
+    <div id="bd-blhn" style="padding:7px 10px"></div>
+  </div>
+
+  <!-- CARD Tong ket -->
+  <div id="c-tk" class="dc" style="width:222px;background:#161b22;border:1px solid rgba(255,255,255,.1)" onmousedown="startDrag(event,'tk')" ontouchstart="startDrag(event,'tk')">
+    <div class="dc-hdr"><span style="font-size:9px;font-weight:700;color:#8b949e;text-transform:uppercase;letter-spacing:.5px">Tong ket</span></div>
+    <div id="bd-tk" style="padding:7px 10px"></div>
+  </div>
+
+  <!-- LEGEND -->
+  <div style="position:absolute;bottom:10px;right:12px;display:flex;gap:10px;background:rgba(22,27,34,.92);border:1px solid rgba(255,255,255,.07);border-radius:20px;padding:5px 14px;z-index:3">
+    <span style="display:flex;align-items:center;gap:4px;font-size:9px;color:#8b949e"><span style="display:inline-block;width:14px;height:2px;background:#00d26a;border-radius:1px"></span>Xuat kho</span>
+    <span style="display:flex;align-items:center;gap:4px;font-size:9px;color:#8b949e"><span style="display:inline-block;width:14px;height:0;border-top:2px dashed #ff7b72"></span>Hang ve</span>
+    <span style="display:flex;align-items:center;gap:4px;font-size:9px;color:#8b949e"><span style="width:7px;height:7px;border-radius:50%;background:#a78bfa;display:inline-block"></span>Ban le</span>
+  </div>
+</div>
+</div>
+
+
+<!-- SETTINGS MODAL -->
+<div id="settings-overlay" onclick="if(event.target===this)closeSettings()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:7000;align-items:center;justify-content:center">
+  <div style="background:#161b22;border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:24px;width:500px;max-width:95vw;max-height:90vh;overflow-y:auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+      <span style="font-size:15px;font-weight:700;color:#f0f6fc">Cai dat Google Sheet</span>
+      <button onclick="closeSettings()" style="background:rgba(255,255,255,.07);border:none;color:#e2e8f0;font-size:13px;cursor:pointer;border-radius:6px;padding:4px 10px">Dong</button>
+    </div>
+    <div style="font-size:10px;color:#8b949e;margin-bottom:14px;padding:8px 10px;background:rgba(255,255,255,.03);border-radius:7px;line-height:1.7">
+      <b style="color:#f0c040">Luu y:</b> Link Publish-to-web (co <b style="color:#e2e8f0">/pub?</b>) thi de trong Ten sheet.<br>
+      Link thuong (co <b style="color:#e2e8f0">/spreadsheets/d/</b>) thi <b style="color:#e2e8f0">phai nhap Ten sheet</b>.
+    </div>
+
+    <div style="margin-bottom:12px;padding:10px 12px;background:#0d1117;border-radius:8px;border:1px solid rgba(0,210,106,.2)">
+      <div style="font-size:10px;font-weight:700;color:#00d26a;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Kho Thanh Hoa</div>
+      <input id="si-url-th" placeholder="https://docs.google.com/spreadsheets/d/..." style="width:100%;padding:7px 9px;border-radius:6px;border:1px solid rgba(255,255,255,.1);background:#161b22;color:#f0f6fc;font-size:12px;outline:none;margin-bottom:6px">
+      <div style="display:flex;gap:8px;align-items:center">
+        <span style="font-size:10px;color:#8b949e;white-space:nowrap">Ten sheet:</span>
+        <input id="si-sn-th" placeholder="VD: KhoThanhHoa" style="flex:1;padding:6px 8px;border-radius:6px;border:1px solid rgba(255,255,255,.1);background:#161b22;color:#f0f6fc;font-size:12px;outline:none">
+        <span style="font-size:10px;color:#8b949e;white-space:nowrap">Col Loai:</span>
+        <input id="si-col-th" type="number" value="3" min="0" max="20" style="width:46px;padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,.1);background:#161b22;color:#f0f6fc;font-size:12px;outline:none;text-align:center">
+      </div>
+    </div>
+
+    <div style="margin-bottom:12px;padding:10px 12px;background:#0d1117;border-radius:8px;border:1px solid rgba(88,166,255,.2)">
+      <div style="font-size:10px;font-weight:700;color:#58a6ff;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Kho Ha Noi</div>
+      <input id="si-url-hn" placeholder="https://docs.google.com/spreadsheets/d/..." style="width:100%;padding:7px 9px;border-radius:6px;border:1px solid rgba(255,255,255,.1);background:#161b22;color:#f0f6fc;font-size:12px;outline:none;margin-bottom:6px">
+      <div style="display:flex;gap:8px;align-items:center">
+        <span style="font-size:10px;color:#8b949e;white-space:nowrap">Ten sheet:</span>
+        <input id="si-sn-hn" placeholder="VD: KhoHaNoi" style="flex:1;padding:6px 8px;border-radius:6px;border:1px solid rgba(255,255,255,.1);background:#161b22;color:#f0f6fc;font-size:12px;outline:none">
+        <span style="font-size:10px;color:#8b949e;white-space:nowrap">Col Loai:</span>
+        <input id="si-col-hn" type="number" value="6" min="0" max="20" style="width:46px;padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,.1);background:#161b22;color:#f0f6fc;font-size:12px;outline:none;text-align:center">
+      </div>
+    </div>
+
+    <div style="margin-bottom:16px;padding:10px 12px;background:#0d1117;border-radius:8px;border:1px solid rgba(240,192,64,.2)">
+      <div style="font-size:10px;font-weight:700;color:#f0c040;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Hoa Don Ban Hang</div>
+      <input id="si-url-hd" placeholder="https://docs.google.com/spreadsheets/d/..." style="width:100%;padding:7px 9px;border-radius:6px;border:1px solid rgba(255,255,255,.1);background:#161b22;color:#f0f6fc;font-size:12px;outline:none;margin-bottom:6px">
+      <div style="display:flex;gap:8px;align-items:center">
+        <span style="font-size:10px;color:#8b949e;white-space:nowrap">Ten sheet:</span>
+        <input id="si-sn-hd" placeholder="VD: HoaDon" style="flex:1;padding:6px 8px;border-radius:6px;border:1px solid rgba(255,255,255,.1);background:#161b22;color:#f0f6fc;font-size:12px;outline:none">
+        <span style="font-size:10px;color:#8b949e;white-space:nowrap">Col Loai:</span>
+        <input id="si-col-hd" type="number" value="6" min="0" max="20" style="width:46px;padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,.1);background:#161b22;color:#f0f6fc;font-size:12px;outline:none;text-align:center">
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px">
+      <button onclick="saveSettings()" style="flex:1;padding:10px;border-radius:8px;background:#238636;border:none;color:#fff;font-size:13px;font-weight:700;cursor:pointer">Luu va tai lai du lieu</button>
+      <button onclick="closeSettings()" style="padding:10px 18px;border-radius:8px;border:1px solid rgba(255,255,255,.12);background:transparent;color:#8b949e;font-size:13px;cursor:pointer">Huy</button>
+    </div>
+    <div id="si-note" style="display:none;margin-top:10px;font-size:11px;color:#56d364;text-align:center;padding:6px;background:rgba(35,134,54,.1);border-radius:6px"></div>
+  </div>
+</div>
+
+<!-- CALENDAR -->
+<div class="cal" id="cal">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+    <button style="background:none;border:1px solid rgba(255,255,255,.14);color:#8b949e;width:26px;height:26px;border-radius:5px;cursor:pointer;font-size:14px" onclick="calNav(-1)">&lsaquo;</button>
+    <span style="font-size:13px;font-weight:700;color:#f0f6fc" id="cal-title"></span>
+    <button style="background:none;border:1px solid rgba(255,255,255,.14);color:#8b949e;width:26px;height:26px;border-radius:5px;cursor:pointer;font-size:14px" onclick="calNav(1)">&rsaquo;</button>
+  </div>
+  <div class="cal-grid" id="cal-grid"></div>
+  <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:9px;padding-top:9px;border-top:1px solid rgba(255,255,255,.07)">
+    <button style="padding:3px 9px;border-radius:20px;border:1px solid rgba(255,255,255,.1);background:transparent;color:#8b949e;font-size:11px;cursor:pointer" onclick="setPeriod('today',null);closeCal()">Hom nay</button>
+    <button style="padding:3px 9px;border-radius:20px;border:1px solid rgba(255,255,255,.1);background:transparent;color:#8b949e;font-size:11px;cursor:pointer" onclick="setPeriod('week',null);closeCal()">Tuan nay</button>
+    <button style="padding:3px 9px;border-radius:20px;border:1px solid rgba(255,255,255,.1);background:transparent;color:#8b949e;font-size:11px;cursor:pointer" onclick="setPeriod('month',null);closeCal()">Thang nay</button>
+    <button style="padding:3px 9px;border-radius:20px;border:1px solid rgba(255,255,255,.1);background:transparent;color:#8b949e;font-size:11px;cursor:pointer" onclick="clearCal()">Xoa</button>
+  </div>
+</div>
+
+<script>
+var SNAME={th:'',hn:'',hd:''};
+var URL_TH='https://docs.google.com/spreadsheets/d/e/2PACX-1vSv3YNHHXNsLYkJdG8mNiLKYA3aQmLlH-5RXxPJB-ngo-H64MH9vFItOBnBKMntnIH-eLQAeYxTddYl/pub?gid=526907359&single=true&output=csv';
+var URL_HN='https://docs.google.com/spreadsheets/d/e/2PACX-1vQaozK9fFGqif2I0QVYkVTW9Tap2KkoX_g1Ygf8F_rWljRJIjGkwVTrN-isrUJ8CFfnP5WIVs4xDQvm/pub?gid=1539198608&single=true&output=csv';
+var URL_HD='https://docs.google.com/spreadsheets/d/e/2PACX-1vQaEn4zXDjvDT2HydsytB-R0JCZGpIYfMxAg0wFGEbqyh8dFXkHm4soPh3YGFVrlZJVgQsqSQY2X0BZ/pub?gid=528072541&single=true&output=csv';
+
+var COL_IDX={th:3,hn:6,hd:6};
+var DATA={th:[],hn:[],hd:[]};
+var CAL={from:null,to:null,target:'from',y:0,m:0};
+var DRAG={k:null,ox:0,oy:0};
+var MONTHS=['Thang 1','Thang 2','Thang 3','Thang 4','Thang 5','Thang 6','Thang 7','Thang 8','Thang 9','Thang 10','Thang 11','Thang 12'];
+var DOWS=['CN','T2','T3','T4','T5','T6','T7'];
+var LAST_M=null;
+
+var CP={
+  th:  {x:10,  y:28,  w:138, h:0},
+  hn:  {x:175, y:28,  w:120, h:0},
+  hd:  {x:322, y:28,  w:112, h:0},
+  st:  {x:458, y:56,  w:92,  h:0},
+  blth:{x:10,  y:258, w:138, h:0},
+  blhn:{x:175, y:258, w:120, h:0},
+  tk:  {x:320, y:258, w:222, h:0}
+};
+
+function dStr(d){if(!d)return'';var y=d.getFullYear(),mo=String(d.getMonth()+1).padStart(2,'0'),dd=String(d.getDate()).padStart(2,'0');return y+'-'+mo+'-'+dd;}
+function dFmt(d){if(!d)return'Chon ngay';return d.getDate()+'/'+(d.getMonth()+1)+'/'+d.getFullYear();}
+function today(){var d=new Date();return new Date(d.getFullYear(),d.getMonth(),d.getDate());}
+function fmtN(n){n=Math.round(n||0);if(Math.abs(n)>=1000)return(n/1000).toFixed(1)+'K';return n.toLocaleString('vi');}
+function norm(s){return(s||'').toLowerCase().replace(/\s/g,'');}
+function gs(r,k){return(r[k]||'').trim();}
+function gn(r,k){return parseFloat((r[k]||'').replace(/[^0-9.-]/g,''))||0;}
+
+function thType(r){
+  var v=norm(gs(r,COL_IDX.th));
+  // Nhap kho TH tu san xuat: 'NhapKho', 'NhapSX', 'Nhap'
+  if(v==='nhapkho'||v.indexOf('nhapkho')>=0||v.indexOf('nhapsx')>=0||v==='nhap')return'nhap';
+  // Gui / Xuat sang HN: 'GuiHN', 'XuatHN', 'MangDi'
+  if(v==='guihn'||v.indexOf('guihn')>=0||v.indexOf('xuathn')>=0||v.indexOf('mangdi')>=0)return'xuat';
+  // Ban le tai TH: 'BanLe'
+  if(v==='banle'||v.indexOf('banle')>=0)return'banle';
+  // Hang hoan ve TH tu HN
+  if(v.indexOf('mangve')>=0||v.indexOf('hoantrave')>=0)return'mangve';
+  return'other';
+}
+function hnType(r){
+  var v=norm(gs(r,COL_IDX.hn));
+  if(v.indexOf('mangdi')>=0||v.indexOf('mang_di')>=0||v==='di')return'di';
+  if(v.indexOf('mangve')>=0||v.indexOf('mang_ve')>=0||v==='ve')return've';
+  if(v.indexOf('banle')>=0||v.indexOf('ban_le')>=0)return'banle';
+  if(v.indexOf('nhan')>=0||v.indexOf('nhap')>=0)return'nhan';
+  return'other';
+}
+function hdType(r){
+  var v=norm(gs(r,COL_IDX.hd));
+  if(v==='giao'||v.indexOf('giao')===0)return'giao';
+  if(v.indexOf('doi')>=0)return'doi';
+  if(v.indexOf('tang')>=0)return'tang';
+  return'other';
+}
+
+function showLoad(b,msg){document.getElementById('ld').style.display=b?'flex':'none';if(msg)document.getElementById('ld-msg').textContent=msg;}
+function showErr(msg){var e=document.getElementById('err');e.textContent=msg;e.style.display=msg?'block':'none';}
+
+function parseLine(s){var r=[],c='',q=false;for(var i=0;i<s.length;i++){var ch=s[i];if(ch==='"'){if(q&&s[i+1]==='"'){c+='"';i++;}else q=!q;}else if(ch===','&&!q){r.push(c);c='';}else c+=ch;}r.push(c);return r;}
+function parseSheet(txt){
+  var ls=txt.replace(/\r/g,'').split('\n').filter(function(l){return l.trim();});
+  var seen={};var rows=[];
+  for(var i=1;i<ls.length;i++){var c=parseLine(ls[i]);if(!c[0]||!c[0].trim())continue;var id=(c[1]||c[0]).trim();if(!id)continue;if(seen[id])continue;seen[id]=true;rows.push(c);}
+  return rows;
+}
+
+
+function buildUrl(raw,sname){
+  if(!raw)return '';
+  var isPub=raw.indexOf('/pub?')>=0||raw.indexOf('output=csv')>=0;
+  var u;
+  if(isPub){
+    u=raw.indexOf('output=csv')>=0?raw:raw+'&output=csv';
+    var hasGid=u.indexOf('gid=')>=0;
+    if(sname&&!hasGid){
+      if(u.indexOf('sheet=')>=0)u=u.replace(/sheet=[^&]*/,'sheet='+encodeURIComponent(sname));
+      else u+='&sheet='+encodeURIComponent(sname);
+    }
+  } else {
+    var mm=raw.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
+    if(!mm)return raw;
+    u='https://docs.google.com/spreadsheets/d/'+mm[1]+'/pub?output=csv';
+    if(sname)u+='&sheet='+encodeURIComponent(sname);
+  }
+  if(location.protocol==='file:'){
+    return 'https://api.codetabs.com/v1/proxy?quest='+encodeURIComponent(u);
+  }
+  return u;
+}
+
+async function loadAll(){
+  showLoad(true,'Dang tai 3 sheet...');showErr('');
+  try{
+    var [t1,t2,t3]=await Promise.all([
+      fetch(buildUrl(URL_TH,SNAME.th)).then(function(r){if(!r.ok)throw new Error('KhoTH HTTP '+r.status+' — Kiem tra Publish to web va ten sheet');return r.text();}),
+
+      fetch(buildUrl(URL_HN,SNAME.hn)).then(function(r){if(!r.ok)throw new Error('KhoHN HTTP '+r.status+' — Kiem tra Publish to web va ten sheet');return r.text();}),
+
+      fetch(buildUrl(URL_HD,SNAME.hd)).then(function(r){if(!r.ok)throw new Error('HoaDon HTTP '+r.status+' — Kiem tra Publish to web va ten sheet');return r.text();})
+    ]);
+    DATA.th=parseSheet(t1);DATA.hn=parseSheet(t2);DATA.hd=parseSheet(t3);
+    buildSpList();render();
+    var d=new Date();
+    document.getElementById('upd-t').textContent='Cap nhat '+d.getHours()+':'+String(d.getMinutes()).padStart(2,'0');
+  }catch(e){showErr('[Loi] '+e.message);}
+  showLoad(false);
+}
+
+function getAllSPs(){
+  var sps={};
+  DATA.th.forEach(function(r){var sp=gs(r,5);if(sp)sps[sp]=1;});
+  DATA.hn.forEach(function(r){var sp=gs(r,5);if(sp)sps[sp]=1;});
+  DATA.hd.forEach(function(r){var sp=gs(r,5);if(sp)sps[sp]=1;});
+  return Object.keys(sps).sort();
+}
+
+function buildSpList(){
+  var sps=getAllSPs();
+  var dd=document.getElementById('dd-sp');
+  dd.innerHTML='<option value="">-- Chon SP --</option>';
+  sps.forEach(function(sp){var o=document.createElement('option');o.value=sp;o.textContent=sp;dd.appendChild(o);});
+  var list=document.getElementById('sp-list');list.innerHTML='';
+  sps.forEach(function(sp){
+    var lbl=document.createElement('label');
+    lbl.className='sp-row on';
+    lbl.innerHTML='<input type="checkbox" class="spc" value="'+sp+'" checked onchange="onSpChange()"><div style="font-size:10px;color:#e2e8f0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+sp+'</div>';
+    list.appendChild(lbl);
+  });
+}
+
+function getCheckedSPs(){
+  var cbs=document.querySelectorAll('.spc:checked');
+  var all=document.querySelectorAll('.spc');
+  if(!cbs.length||cbs.length===all.length)return null;
+  var res={};cbs.forEach(function(c){res[c.value]=1;});return res;
+}
+
+function toggleAll(ch){
+  document.querySelectorAll('.spc').forEach(function(c){c.checked=ch;c.closest('.sp-row').classList.toggle('on',ch);});
+  document.getElementById('dd-sp').value='';updateSpNote();render();
+}
+function onSpChange(){
+  var all=document.querySelectorAll('.spc'),ch=document.querySelectorAll('.spc:checked');
+  var cb=document.getElementById('cb-all');cb.checked=all.length===ch.length;cb.indeterminate=ch.length>0&&ch.length<all.length;
+  document.querySelectorAll('.spc').forEach(function(c){c.closest('.sp-row').classList.toggle('on',c.checked);});
+  document.getElementById('dd-sp').value='';updateSpNote();render();
+}
+function updateSpNote(){
+  var all=document.querySelectorAll('.spc').length,ch=document.querySelectorAll('.spc:checked').length;
+  var note=document.getElementById('sp-note');
+  note.style.display=(ch<all&&ch>0)?'block':'none';
+  if(ch<all&&ch>0)note.textContent=ch+'/'+all+' SP';
+}
+function onDropdown(val){
+  if(!val){toggleAll(true);return;}
+  document.querySelectorAll('.spc').forEach(function(c){c.checked=c.value===val;c.closest('.sp-row').classList.toggle('on',c.checked);});
+  var cb=document.getElementById('cb-all');cb.checked=false;cb.indeterminate=true;
+  updateSpNote();render();
+}
+
+function inRange(r,ngayCol){
+  var ng=gs(r,ngayCol);if(!ng)return true;
+  var f=CAL.from?dStr(CAL.from):'',t=CAL.to?dStr(CAL.to):'';
+  if(f&&ng<f)return false;if(t&&ng>t)return false;return true;
+}
+
+// Quy doi: bao nhieu cai = 1 tui (TH tinh cai, HN/HD tinh tui)
+var CAI_PER_TUI = {
+  'nem chua':    10,
+  'nem chua nho': 10,
+  'nem chua nhỏ': 10,
+  'nem thính':    1,
+  'nem thinh':    1,
+  'nem nướng':    2,
+  'nem nuong':    2,
+};
+function getCaiPerTui(sp){
+  var spn = (sp||'').toLowerCase().trim();
+  // tim chinh xac truoc
+  if(CAI_PER_TUI[spn] !== undefined) return CAI_PER_TUI[spn];
+  // fallback: kiem tra chua chuoi
+  var v = norm(sp);
+  if(v.indexOf('nemchua')>=0) return 10;
+  if(v.indexOf('nemthinh')>=0||v.indexOf('nemthinh')>=0) return 1;
+  if(v.indexOf('nemnuong')>=0||v.indexOf('nemnướng')>=0) return 2;
+  return 1; // cac loai khac: nem vuong, nem coi, vit co lung...
+}
+function caiToTui(sl, sp){ return sl / getCaiPerTui(sp); }
+
+function calcMetrics(){
+  var fSP=getCheckedSPs();
+  var m={nhapSX:0,xuatHN:0,banLeTH:0,nhanHN:0,mangDi:0,mangVe:0,banLeHN:0,giao:0,doi:0,tang:0};
+  DATA.th.forEach(function(r){
+    if(!inRange(r,2))return;var sp=gs(r,5);if(fSP&&!fSP[sp])return;
+    var slCai=gn(r,6), tui=caiToTui(slCai,sp), t=thType(r);
+    if(t==='nhap')m.nhapSX+=tui;else if(t==='xuat')m.xuatHN+=tui;else if(t==='banle')m.banLeTH+=tui;else if(t==='mangve')m.mangVeTH=(m.mangVeTH||0)+tui;
+  });
+  DATA.hn.forEach(function(r){
+    if(!inRange(r,2))return;var sp=gs(r,5);if(fSP&&!fSP[sp])return;
+    var sl=gn(r,8),t=hnType(r);
+    if(t==='nhan')m.nhanHN+=sl;else if(t==='di')m.mangDi+=sl;else if(t==='ve')m.mangVe+=sl;else if(t==='banle')m.banLeHN+=sl;
+  });
+  DATA.hd.forEach(function(r){
+    if(!inRange(r,2))return;var sp=gs(r,5);if(fSP&&!fSP[sp])return;
+    var sl=gn(r,7),t=hdType(r);
+    if(t==='giao')m.giao+=sl;else if(t==='doi')m.doi+=sl;else if(t==='tang')m.tang+=sl;
+  });
+  m.mangVeTH=m.mangVeTH||0;
+  m.xuatHNnet=m.xuatHN-m.mangVeTH;
+  m.tonTH=m.nhapSX-m.xuatHNnet-m.banLeTH;
+  m.netXuatHN=m.mangDi-m.mangVe;
+  m.tonHN=m.nhanHN-m.netXuatHN-m.banLeHN;
+  m.netGiao=m.giao-m.doi;
+  m.diffXuat=m.xuatHN-m.nhanHN;
+  m.diffGiao=m.netXuatHN-m.netGiao;
+  return m;
+}
+
+function dr(lbl,val,col){return '<div class="dr"><span style="color:#8b949e">'+lbl+'</span><span style="font-weight:700;color:'+(col||'#e2e8f0')+'">'+fmtN(val)+'</span></div>';}
+function dnet(lbl,val,col){var c2=col+'33';return '<div class="dnet" style="background:'+c2+'"><span style="color:#8b949e">'+lbl+'</span><span style="font-size:12px;font-weight:700;color:'+col+'">'+fmtN(val)+'</span></div>';}
+
+function render(){
+  var m=calcMetrics();LAST_M=m;
+  document.getElementById('bd-th').innerHTML=dr('Nhap SX',m.nhapSX,'#00d26a')+dr('Xuat HN',m.xuatHN,'#58a6ff')+dr('Ban le TH',m.banLeTH,'#a78bfa')+dnet('Ton kho TH',m.tonTH,m.tonTH<0?'#ff7b72':'#56d364');
+  document.getElementById('bd-hn').innerHTML=dr('Nhan hang',m.nhanHN,'#58a6ff')+dr('Mang di',m.mangDi,'#00d26a')+dr('Mang ve',m.mangVe,'#ff7b72')+dr('Ban le HN',m.banLeHN,'#fb923c')+dnet('Net xuat HN',m.netXuatHN,m.netXuatHN<0?'#ff7b72':'#58a6ff');
+  document.getElementById('bd-hd').innerHTML=dr('Giao hang',m.giao,'#56d364')+dr('Doi tra',m.doi,'#ff7b72')+dr('Tang KM',m.tang,'#a78bfa')+dnet('Net giao',m.netGiao,m.netGiao<0?'#ff7b72':'#f0c040');
+  document.getElementById('bd-st').innerHTML='<div style="font-size:20px;font-weight:700;color:#f0c040">'+fmtN(m.netGiao)+'</div><div style="font-size:9px;color:#8b949e;margin-top:2px">goi nhan hang</div>';
+  document.getElementById('bd-blth').innerHTML='<div style="font-size:20px;font-weight:700;color:#a78bfa">'+fmtN(m.banLeTH)+'</div><div style="font-size:9px;color:#8b949e;margin-top:2px">goi tai Thanh Hoa</div>';
+  document.getElementById('bd-blhn').innerHTML='<div style="font-size:20px;font-weight:700;color:#fb923c">'+fmtN(m.banLeHN)+'</div><div style="font-size:9px;color:#8b949e;margin-top:2px">goi tai Ha Noi</div>';
+  var tot=m.banLeTH+m.banLeHN+m.netGiao;
+  document.getElementById('bd-tk').innerHTML=
+    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;margin-bottom:5px">'+
+    '<div style="background:rgba(167,139,250,.12);border-radius:5px;padding:5px;text-align:center"><div style="font-size:8px;color:#8b949e;margin-bottom:2px">Ban le TH</div><div style="font-size:13px;font-weight:700;color:#a78bfa">'+fmtN(m.banLeTH)+'</div></div>'+
+    '<div style="background:rgba(251,146,60,.12);border-radius:5px;padding:5px;text-align:center"><div style="font-size:8px;color:#8b949e;margin-bottom:2px">Ban le HN</div><div style="font-size:13px;font-weight:700;color:#fb923c">'+fmtN(m.banLeHN)+'</div></div>'+
+    '<div style="background:rgba(240,192,64,.12);border-radius:5px;padding:5px;text-align:center"><div style="font-size:8px;color:#8b949e;margin-bottom:2px">Sieu thi</div><div style="font-size:13px;font-weight:700;color:#f0c040">'+fmtN(m.netGiao)+'</div></div>'+
+    '</div>'+
+    '<div style="background:rgba(255,255,255,.06);border-radius:5px;padding:5px 8px;display:flex;justify-content:space-between;align-items:center">'+
+    '<span style="font-size:10px;color:#8b949e">Tong cong</span><span style="font-size:14px;font-weight:700;color:#f0f6fc">'+fmtN(tot)+' goi</span></div>';
+
+  function rsRow(lbl,diff,base){
+    var ok=Math.abs(diff)<0.5,pct=base?Math.round(Math.abs(diff/base)*100):0;
+    var col=ok?'#56d364':pct<5?'#f0c040':'#ff7b72';
+    return '<div style="padding:4px 7px;border-radius:6px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);margin-bottom:3px">'+
+      '<div style="font-size:9px;color:#8b949e">'+lbl+'</div>'+
+      '<div style="font-size:10px;font-weight:700;color:'+col+'">'+(ok?'Khop':(pct<5?'Xap xi':'Lech '+pct+'%'))+'</div></div>';
+  }
+  document.getElementById('rs-list').innerHTML=rsRow('TH\u2192HN',m.diffXuat,m.xuatHN)+rsRow('HN\u2192HD',m.diffGiao,m.netXuatHN)+
+    '<div style="padding:4px 7px;border-radius:6px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06)">'+
+    '<div style="font-size:9px;color:#8b949e">Ton kho</div>'+
+    '<div style="font-size:10px;font-weight:700;color:'+(m.tonTH<0||m.tonHN<0?'#ff7b72':'#56d364')+'">'+(m.tonTH<0||m.tonHN<0?'Co am!':'Binh thuong')+'</div></div>';
+
+  setTimeout(function(){Object.keys(CP).forEach(function(k){var el=document.getElementById('c-'+k);if(el)CP[k].h=el.offsetHeight;});drawArrows();},40);
+}
+
+function startDrag(e,k){
+  var t=e.touches?e.touches[0]:e;
+  var r=document.getElementById('c-'+k).getBoundingClientRect();
+  DRAG.k=k;DRAG.ox=t.clientX-r.left;DRAG.oy=t.clientY-r.top;
+  document.getElementById('c-'+k).style.zIndex=20;e.preventDefault();
+}
+function onMove(e){
+  if(!DRAG.k)return;
+  var t=e.touches?e.touches[0]:e;
+  var cv=document.getElementById('cv'),cr=cv.getBoundingClientRect();
+  var c=CP[DRAG.k],el=document.getElementById('c-'+DRAG.k);
+  c.x=Math.max(0,Math.min(cv.offsetWidth-c.w,t.clientX-cr.left-DRAG.ox));
+  c.y=Math.max(0,Math.min(cv.offsetHeight-(c.h||80),t.clientY-cr.top-DRAG.oy));
+  el.style.left=c.x+'px';el.style.top=c.y+'px';
+  drawArrows();if(e.touches)e.preventDefault();
+}
+function onUp(){if(DRAG.k){document.getElementById('c-'+DRAG.k).style.zIndex=2;DRAG.k=null;}}
+document.addEventListener('mousemove',onMove);
+document.addEventListener('touchmove',onMove,{passive:false});
+document.addEventListener('mouseup',onUp);
+document.addEventListener('touchend',onUp);
+
+function R(v){return Math.round(v);}
+function edge(k,s){var c=CP[k],h=c.h||100;return s==='r'?{x:c.x+c.w,y:c.y+h/2}:s==='l'?{x:c.x,y:c.y+h/2}:s==='b'?{x:c.x+c.w/2,y:c.y+h}:{x:c.x+c.w/2,y:c.y};}
+function bH(p1,p2){var mx=(p1.x+p2.x)/2;return 'M'+R(p1.x)+','+R(p1.y)+' C'+R(mx)+','+R(p1.y)+' '+R(mx)+','+R(p2.y)+' '+R(p2.x)+','+R(p2.y);}
+function bV(p1,p2){var my=(p1.y+p2.y)/2;return 'M'+R(p1.x)+','+R(p1.y)+' C'+R(p1.x)+','+R(my)+' '+R(p2.x)+','+R(my)+' '+R(p2.x)+','+R(p2.y);}
+function ap(d,col,w,da){
+  var s='stroke-dasharray:"'+(da?'6 3':'8 4')+'" style="animation:dash .75s linear infinite"';
+  return '<path d="'+d+'" fill="none" stroke="'+col+'" stroke-width="'+(w||2.5)+'" stroke-dasharray="'+(da?'6 3':'8 4')+'" style="animation:dash .75s linear infinite" marker-end="url(#ah)"/>';
+}
+function badge(p1,p2,txt,col,vert){
+  var mx=(p1.x+p2.x)/2,my=(p1.y+p2.y)/2;var lw=Math.max(28,txt.length*6+10);
+  var bx=vert?mx+5:mx-lw/2,by=my-7;
+  return '<rect x="'+R(bx)+'" y="'+R(by)+'" width="'+lw+'" height="14" rx="7" fill="#0d1117" stroke="'+col+'" stroke-width="0.7"/>'+
+    '<text x="'+R(vert?bx+lw/2:mx)+'" y="'+R(by+10)+'" text-anchor="middle" fill="'+col+'" font-size="9" font-weight="700" font-family="sans-serif">'+txt+'</text>';
+}
+function dot(x,y,col){return '<circle cx="'+R(x)+'" cy="'+R(y)+'" r="3.5" fill="'+col+'"/>';}
+
+function drawArrows(){
+  var m=LAST_M;if(!m)return;
+  Object.keys(CP).forEach(function(k){var el=document.getElementById('c-'+k);if(el)CP[k].h=el.offsetHeight;});
+  var cv=document.getElementById('cv');
+  var s=document.getElementById('arsvg');
+  s.setAttribute('viewBox','0 0 '+cv.offsetWidth+' '+cv.offsetHeight);
+  var defs='<defs><marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M1 2L8 5L1 8" fill="none" stroke="context-stroke" stroke-width="2" stroke-linecap="round"/></marker></defs>';
+  var o='';var p1,p2;
+
+  p1=edge('th','r');p2=edge('hn','l');
+  o+=ap(bH(p1,p2),'#00d26a',2.5);o+=badge(p1,p2,fmtN(m.xuatHN),'#00d26a');o+=dot(p1.x,p1.y,'#00d26a')+dot(p2.x,p2.y,'#00d26a');
+
+  p1=edge('hn','r');p2=edge('hd','l');
+  o+=ap(bH(p1,p2),'#58a6ff',2.5);o+=badge(p1,p2,fmtN(m.mangDi),'#58a6ff');o+=dot(p1.x,p1.y,'#58a6ff')+dot(p2.x,p2.y,'#58a6ff');
+
+  p1=edge('hd','r');p2=edge('st','l');
+  o+=ap(bH(p1,p2),'#f0c040',2.5);o+=badge(p1,p2,fmtN(m.netGiao),'#f0c040');o+=dot(p1.x,p1.y,'#f0c040')+dot(p2.x,p2.y,'#f0c040');
+
+  if(m.doi>0){
+    p1=edge('hd','t');p2=edge('hn','t');
+    var aY=Math.min(p1.y,p2.y)-28;
+    o+='<path d="M'+R(p1.x)+','+R(p1.y)+' C'+R(p1.x)+','+R(aY)+' '+R(p2.x)+','+R(aY)+' '+R(p2.x)+','+R(p2.y)+'" fill="none" stroke="#ff7b72" stroke-width="1.5" stroke-dasharray="5 3" style="animation:dash .75s linear infinite" marker-end="url(#ah)"/>';
+    var rmx=(p1.x+p2.x)/2,rmy=aY-9;
+    o+='<rect x="'+R(rmx-24)+'" y="'+R(rmy-7)+'" width="48" height="13" rx="6" fill="#0d1117" stroke="#ff7b72" stroke-width="0.6"/>';
+    o+='<text x="'+R(rmx)+'" y="'+R(rmy+4)+'" text-anchor="middle" fill="#ff7b72" font-size="8.5" font-family="sans-serif">Doi: '+fmtN(m.doi)+'</text>';
+  }
+
+  p1=edge('th','b');p2=edge('blth','t');o+=ap(bV(p1,p2),'#a78bfa',2);o+=badge(p1,p2,fmtN(m.banLeTH),'#a78bfa',true);
+  p1=edge('hn','b');p2=edge('blhn','t');o+=ap(bV(p1,p2),'#fb923c',2);o+=badge(p1,p2,fmtN(m.banLeHN),'#fb923c',true);
+
+  var tkH=CP.tk.h||80;
+  p1=edge('blth','r');p2={x:CP.tk.x,y:CP.tk.y+tkH*0.3};o+='<path d="'+bH(p1,p2)+'" fill="none" stroke="#a78bfa" stroke-width="1" stroke-dasharray="4 4" style="animation:dash .75s linear infinite" opacity="0.6" marker-end="url(#ah)"/>';
+  p1=edge('blhn','r');p2={x:CP.tk.x,y:CP.tk.y+tkH*0.55};o+='<path d="'+bH(p1,p2)+'" fill="none" stroke="#fb923c" stroke-width="1" stroke-dasharray="4 4" style="animation:dash .75s linear infinite" opacity="0.6" marker-end="url(#ah)"/>';
+  p1=edge('st','b');p2={x:CP.tk.x+CP.tk.w*0.7,y:CP.tk.y};o+='<path d="'+bV(p1,p2)+'" fill="none" stroke="#f0c040" stroke-width="1" stroke-dasharray="4 4" style="animation:dash .75s linear infinite" opacity="0.6" marker-end="url(#ah)"/>';
+
+  s.innerHTML=defs+o;
+}
+
+function setPeriod(p,btn){
+  ['today','week','month'].forEach(function(x){var el=document.getElementById('pb-'+x);if(el)el.classList.toggle('on',x===p);});
+  var t=today();
+  if(p==='today'){CAL.from=new Date(t);CAL.to=new Date(t);}
+  else if(p==='week'){var d=t.getDay();CAL.from=new Date(t.getFullYear(),t.getMonth(),t.getDate()-d);CAL.to=new Date(t);}
+  else if(p==='month'){CAL.from=new Date(t.getFullYear(),t.getMonth(),1);CAL.to=new Date(t.getFullYear(),t.getMonth()+1,0);}
+  updDateBtns();if(LAST_M!==null)render();
+}
+
+function updDateBtns(){document.getElementById('btn-from').textContent=dFmt(CAL.from);document.getElementById('btn-to').textContent=dFmt(CAL.to);}
+function openCal(target,btn){
+  var pop=document.getElementById('cal');
+  var already=pop.classList.contains('show')&&CAL.target===target;
+  pop.classList.remove('show');if(already)return;
+  CAL.target=target;var base=(target==='from'?CAL.from:CAL.to)||today();
+  CAL.y=base.getFullYear();CAL.m=base.getMonth();buildCal();
+  var r=btn.getBoundingClientRect();
+  pop.style.top=(r.bottom+6)+'px';pop.style.left=Math.min(r.left,window.innerWidth-250)+'px';
+  pop.classList.add('show');
+}
+function closeCal(){document.getElementById('cal').classList.remove('show');}
+document.addEventListener('click',function(e){if(!e.target.closest('#cal')&&!e.target.closest('#btn-from')&&!e.target.closest('#btn-to'))closeCal();});
+function calNav(d){CAL.m+=d;if(CAL.m<0){CAL.m=11;CAL.y--;}if(CAL.m>11){CAL.m=0;CAL.y++;}buildCal();}
+function buildCal(){
+  document.getElementById('cal-title').textContent=MONTHS[CAL.m]+' '+CAL.y;
+  var g=document.getElementById('cal-grid');
+  var h=DOWS.map(function(d){return'<div style="text-align:center;font-size:9px;font-weight:700;color:#8b949e;padding:3px 0">'+d+'</div>';}).join('');
+  var first=new Date(CAL.y,CAL.m,1).getDay(),days=new Date(CAL.y,CAL.m+1,0).getDate(),t=today();
+  for(var i=0;i<first;i++)h+='<div></div>';
+  for(var day=1;day<=days;day++){
+    var dd=new Date(CAL.y,CAL.m,day);var cls='cd';
+    if(dd.toDateString()===t.toDateString())cls+=' today';
+    if(CAL.from&&dd.toDateString()===CAL.from.toDateString())cls+=' sel';
+    if(CAL.to&&dd.toDateString()===CAL.to.toDateString())cls+=' sel';
+    if(CAL.from&&CAL.to&&dd>CAL.from&&dd<CAL.to)cls+=' inr';
+    h+='<div class="'+cls+'" onclick="pickDay('+CAL.y+','+CAL.m+','+day+')">'+day+'</div>';
+  }
+  g.innerHTML=h;
+}
+function pickDay(y,mo,d){
+  var picked=new Date(y,mo,d);
+  if(CAL.target==='from'){CAL.from=picked;if(CAL.to&&CAL.to<CAL.from)CAL.to=null;updDateBtns();CAL.target='to';buildCal();}
+  else{if(CAL.from&&picked<CAL.from){CAL.from=picked;}else{CAL.to=picked;}updDateBtns();closeCal();['today','week','month'].forEach(function(x){var el=document.getElementById('pb-'+x);if(el)el.classList.remove('on');});render();}
+}
+function clearCal(){if(CAL.target==='from'){CAL.from=null;document.getElementById('btn-from').textContent='Tu ngay';}else{CAL.to=null;document.getElementById('btn-to').textContent='Den ngay';}closeCal();if(LAST_M!==null)render();}
+
+
+function openSettings(){
+  document.getElementById('si-url-th').value=URL_TH;
+  document.getElementById('si-url-hn').value=URL_HN;
+  document.getElementById('si-url-hd').value=URL_HD;
+  document.getElementById('si-sn-th').value=SNAME.th||'';
+  document.getElementById('si-sn-hn').value=SNAME.hn||'';
+  document.getElementById('si-sn-hd').value=SNAME.hd||'';
+  document.getElementById('si-col-th').value=COL_IDX.th;
+  document.getElementById('si-col-hn').value=COL_IDX.hn;
+  document.getElementById('si-col-hd').value=COL_IDX.hd;
+  document.getElementById('si-note').style.display='none';
+  document.getElementById('settings-overlay').style.display='flex';
+}
+function closeSettings(){document.getElementById('settings-overlay').style.display='none';}
+function saveSettings(){
+  var uTH=(document.getElementById('si-url-th').value||'').trim();
+  var uHN=(document.getElementById('si-url-hn').value||'').trim();
+  var uHD=(document.getElementById('si-url-hd').value||'').trim();
+  if(!uTH||!uHN||!uHD){alert('Nhap du 3 link!');return;}
+  URL_TH=uTH;URL_HN=uHN;URL_HD=uHD;
+  COL_IDX.th=parseInt(document.getElementById('si-col-th').value)||3;
+  COL_IDX.hn=parseInt(document.getElementById('si-col-hn').value)||6;
+  COL_IDX.hd=parseInt(document.getElementById('si-col-hd').value)||6;
+  SNAME.th=document.getElementById('si-sn-th').value.trim();
+  SNAME.hn=document.getElementById('si-sn-hn').value.trim();
+  SNAME.hd=document.getElementById('si-sn-hd').value.trim();
+  var cfg={urlTH:URL_TH,urlHN:URL_HN,urlHD:URL_HD,snTH:SNAME.th,snHN:SNAME.hn,snHD:SNAME.hd,colTH:COL_IDX.th,colHN:COL_IDX.hn,colHD:COL_IDX.hd};
+  try{localStorage.setItem('kflow_cfg',JSON.stringify(cfg));}catch(e){}
+  var note=document.getElementById('si-note');note.textContent='Da luu! Dang tai lai...';note.style.display='block';
+  setTimeout(function(){closeSettings();loadAll();},800);
+}
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closeSettings();});
+
+
+var _APP_PW = 'nemthanh3636';
+var _SESSION_KEY = 'kflow_auth';
+
+function checkAuth(){
+  var s=sessionStorage.getItem(_SESSION_KEY);
+  if(s===_APP_PW){
+    document.getElementById('login-overlay').classList.add('hidden');
+  } else {
+    document.getElementById('login-overlay').classList.remove('hidden');
+    setTimeout(function(){var i=document.getElementById('loginInp');if(i)i.focus();},100);
+  }
+}
+
+function doLogin(){
+  var inp=document.getElementById('loginInp');
+  var err=document.getElementById('loginErr');
+  if(!inp)return;
+  if(inp.value===_APP_PW){
+    sessionStorage.setItem(_SESSION_KEY,_APP_PW);
+    document.getElementById('login-overlay').classList.add('hidden');
+    err.textContent='';
+  } else {
+    err.textContent='Mat khau khong dung, thu lai!';
+    inp.value='';
+    inp.focus();
+  }
+}
+
+window.onload=function(){
+  try{var saved=localStorage.getItem('kflow_cfg');if(saved){var cfg=JSON.parse(saved);if(cfg.urlTH)URL_TH=cfg.urlTH;if(cfg.urlHN)URL_HN=cfg.urlHN;if(cfg.urlHD)URL_HD=cfg.urlHD;if(cfg.snTH!==undefined)SNAME.th=cfg.snTH;if(cfg.snHN!==undefined)SNAME.hn=cfg.snHN;if(cfg.snHD!==undefined)SNAME.hd=cfg.snHD;if(cfg.colTH)COL_IDX.th=cfg.colTH;if(cfg.colHN)COL_IDX.hn=cfg.colHN;if(cfg.colHD)COL_IDX.hd=cfg.colHD;}}catch(e){}
+  var t=today();CAL.from=new Date(t);CAL.to=new Date(t);updDateBtns();
+  Object.keys(CP).forEach(function(k){var el=document.getElementById('c-'+k);if(el){el.style.left=CP[k].x+'px';el.style.top=CP[k].y+'px';}});
+  checkAuth();
+  loadAll();
+  setInterval(function(){loadAll();},5*60*1000);
+};
+window.addEventListener('resize',function(){drawArrows();});
+</script>
+</body>
+</html>
