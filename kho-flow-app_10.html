@@ -410,44 +410,61 @@ function inRange(r,ngayCol){
 }
 
 // Quy doi: bao nhieu cai = 1 tui (TH tinh cai, HN/HD tinh tui)
+// Quy doi: bao nhieu cai = 1 tui
+// Kho TH + Kho HN: tinh theo CAI
+// Ban hang (Hoa Don) + Ban le: tinh theo TUI
 var CAI_PER_TUI = {
-  'nem chua':    10,
-  'nem chua nho': 10,
-  'nem chua nhỏ': 10,
-  'nem thính':    1,
-  'nem thinh':    1,
-  'nem nướng':    2,
-  'nem nuong':    2,
+  'nem chua':        10,
+  'nem thính':        1,
+  'nem thinh':        1,
+  'nem nướng':        2,
+  'nem nuong':        2,
+  'nem coi':          1,
+  'nem chua nho':    10,
+  'nem chua nhỏ':    10,
+  'nem bia':         10,
+  'nem vuông':       10,
+  'nem vuong':       10,
+  'nem lùn':         10,
+  'nem lun':         10,
+  'nem lùn nhỏ':     10,
+  'nem lun nho':     10,
+  'nem lùn nho':     10,
 };
 function getCaiPerTui(sp){
-  var spn = (sp||'').toLowerCase().trim();
-  // tim chinh xac truoc
-  if(CAI_PER_TUI[spn] !== undefined) return CAI_PER_TUI[spn];
-  // fallback: kiem tra chua chuoi
-  var v = norm(sp);
-  if(v.indexOf('nemchua')>=0) return 10;
-  if(v.indexOf('nemthinh')>=0||v.indexOf('nemthinh')>=0) return 1;
-  if(v.indexOf('nemnuong')>=0||v.indexOf('nemnướng')>=0) return 2;
-  return 1; // cac loai khac: nem vuong, nem coi, vit co lung...
+  var spn=(sp||'').toLowerCase().trim();
+  if(CAI_PER_TUI[spn]!==undefined)return CAI_PER_TUI[spn];
+  var v=norm(sp);
+  if(v.indexOf('nemchuanho')>=0||v.indexOf('nembias')>=0||v.indexOf('nembisa')>=0||v.indexOf('nembia')>=0)return 10;
+  if(v.indexOf('nemchua')>=0)return 10;
+  if(v.indexOf('nemthinh')>=0)return 1;
+  if(v.indexOf('nemnuong')>=0)return 2;
+  if(v.indexOf('nemcoi')>=0)return 1;
+  if(v.indexOf('nemvuong')>=0)return 10;
+  if(v.indexOf('nemlun')>=0)return 10;
+  return 1;
 }
 function caiToTui(sl, sp){ return sl / getCaiPerTui(sp); }
+function tuiToCai(sl, sp){ return sl * getCaiPerTui(sp); }
 
 function calcMetrics(){
   var fSP=getCheckedSPs();
   var m={nhapSX:0,xuatHN:0,banLeTH:0,nhanHN:0,mangDi:0,mangVe:0,banLeHN:0,giao:0,doi:0,tang:0};
   DATA.th.forEach(function(r){
     if(!inRange(r,2))return;var sp=gs(r,5);if(fSP&&!fSP[sp])return;
-    var slCai=gn(r,6), tui=caiToTui(slCai,sp), t=thType(r);
-    if(t==='nhap')m.nhapSX+=tui;else if(t==='xuat')m.xuatHN+=tui;else if(t==='banle')m.banLeTH+=tui;else if(t==='mangve')m.mangVeTH=(m.mangVeTH||0)+tui;
+    var sl=gn(r,6), t=thType(r);
+    if(t==='nhap')m.nhapSX+=sl;else if(t==='xuat')m.xuatHN+=sl;else if(t==='banle')m.banLeTH+=sl;else if(t==='mangve')m.mangVeTH=(m.mangVeTH||0)+sl;
   });
   DATA.hn.forEach(function(r){
     if(!inRange(r,2))return;var sp=gs(r,5);if(fSP&&!fSP[sp])return;
+    // Kho HN tinh theo CAI, giu nguyen
     var sl=gn(r,8),t=hnType(r);
     if(t==='nhan')m.nhanHN+=sl;else if(t==='di')m.mangDi+=sl;else if(t==='ve')m.mangVe+=sl;else if(t==='banle')m.banLeHN+=sl;
   });
   DATA.hd.forEach(function(r){
     if(!inRange(r,2))return;var sp=gs(r,5);if(fSP&&!fSP[sp])return;
-    var sl=gn(r,7),t=hdType(r);
+    // Hoa Don ghi theo TUI, quy doi sang CAI de khop voi Kho
+    var slTui=gn(r,7),sl=tuiToCai(slTui,sp),t=hdType(r);
     if(t==='giao')m.giao+=sl;else if(t==='doi')m.doi+=sl;else if(t==='tang')m.tang+=sl;
   });
   m.mangVeTH=m.mangVeTH||0;
